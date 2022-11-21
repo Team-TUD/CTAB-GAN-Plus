@@ -1,5 +1,5 @@
 # CTAB-GAN+
-This is the official git paper [CTAB-GAN+: Enhancing Tabular Data Synthesis](https://arxiv.org/abs/2204.00401). Current code is **WITHOUT** differential privacy part. The code with differential privacy is in this [git](https://github.com/Team-TUD/CTAB-GAN-Plus-DP)
+This is the official git paper [CTAB-GAN+: Enhancing Tabular Data Synthesis](https://arxiv.org/abs/2204.00401). Current code is **WITHOUT** differential privacy part. The code with differential privacy is in this [github](https://github.com/Team-TUD/CTAB-GAN-Plus-DP). 
 If you have any question, please contact `z.zhao-8@tudelft.nl` for more information.
 
 
