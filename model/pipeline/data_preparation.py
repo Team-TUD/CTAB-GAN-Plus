@@ -23,7 +23,7 @@ class DataPrep(object):
         self.label_encoder_list = []
         
         target_col = list(type.values())[0]
-        if target_col is not None:
+        if target_col == "Classification":
             y_real = raw_df[target_col]
             X_real = raw_df.drop(columns=[target_col])
             X_train_real, _, y_train_real, _ = model_selection.train_test_split(X_real ,y_real, test_size=test_ratio, stratify=y_real,random_state=42)
