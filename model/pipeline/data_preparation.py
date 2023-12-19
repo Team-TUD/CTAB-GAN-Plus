@@ -22,18 +22,23 @@ class DataPrep(object):
         self.lower_bounds = {}
         self.label_encoder_list = []
         
+        problem = list(type.keys())[0]
         target_col = list(type.values())[0]
-        if target_col == "Classification":
+        if problem:
             y_real = raw_df[target_col]
             X_real = raw_df.drop(columns=[target_col])
-            X_train_real, _, y_train_real, _ = model_selection.train_test_split(X_real ,y_real, test_size=test_ratio, stratify=y_real,random_state=42)
-        
+            
+            if problem=="Classification":
+                X_train_real, _, y_train_real, _ = model_selection.train_test_split(X_real ,y_real, test_size=test_ratio, stratify=y_real,random_state=42)
+            else:
+                X_train_real, _, y_train_real, _ = model_selection.train_test_split(X_real ,y_real, test_size=test_ratio,random_state=42) 
+            
             X_train_real[target_col]= y_train_real
 
             self.df = X_train_real
+
         else:
             self.df = raw_df
-
         self.df = self.df.replace(r' ', np.nan)
         self.df = self.df.fillna('empty')
        

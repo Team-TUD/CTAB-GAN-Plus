@@ -4,7 +4,7 @@ from sklearn import metrics
 from sklearn import model_selection
 from sklearn.preprocessing import MinMaxScaler,StandardScaler
 from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge, Lasso, BayesianRidge
 from sklearn import svm,tree
 from sklearn.ensemble import RandomForestClassifier
 from dython.nominal import compute_associations
@@ -15,9 +15,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 def supervised_model_training(x_train, y_train, x_test, 
-                              y_test, model_name):
+                              y_test, model_name,problem_type):
   
-     
   if model_name == 'lr':
     model  = LogisticRegression(random_state=42,max_iter=500) 
   elif model_name == 'svm':
@@ -28,46 +27,70 @@ def supervised_model_training(x_train, y_train, x_test,
     model = RandomForestClassifier(random_state=42)
   elif model_name == "mlp":
     model = MLPClassifier(random_state=42,max_iter=100)
+  elif model_name == "l_reg":
+    model = LinearRegression()
+  elif model_name == "ridge":
+    model = Ridge(random_state=42)
+  elif model_name == "lasso":
+    model = Lasso(random_state=42)
+  elif model_name == "B_ridge":
+    model = BayesianRidge()
   
   model.fit(x_train, y_train)
   pred = model.predict(x_test)
 
-  if len(np.unique(y_train))>2:
-    predict = model.predict_proba(x_test)        
-    acc = metrics.accuracy_score(y_test,pred)*100
-    auc = metrics.roc_auc_score(y_test, predict,average="weighted",multi_class="ovr")
-    f1_score = metrics.precision_recall_fscore_support(y_test, pred,average="weighted")[2]
-    return [acc, auc,f1_score] 
+  if problem_type == "Classification":
+    if len(np.unique(y_train))>2:
+      predict = model.predict_proba(x_test)        
+      acc = metrics.accuracy_score(y_test,pred)*100
+      auc = metrics.roc_auc_score(y_test, predict,average="weighted",multi_class="ovr")
+      f1_score = metrics.precision_recall_fscore_support(y_test, pred,average="weighted")[2]
+      return [acc, auc, f1_score] 
 
+    else:
+      predict = model.predict_proba(x_test)[:,1]    
+      acc = metrics.accuracy_score(y_test,pred)*100
+      auc = metrics.roc_auc_score(y_test, predict)
+      f1_score = metrics.precision_recall_fscore_support(y_test,pred)[2].mean()
+      return [acc, auc, f1_score] 
+  
   else:
-    predict = model.predict_proba(x_test)[:,1]    
-    acc = metrics.accuracy_score(y_test,pred)*100
-    auc = metrics.roc_auc_score(y_test, predict)
-    f1_score = metrics.precision_recall_fscore_support(y_test,pred)[2].mean()
-    return [acc, auc,f1_score] 
+    mse = metrics.mean_absolute_percentage_error(y_test,pred)
+    evs = metrics.explained_variance_score(y_test, pred)
+    r2_score = metrics.r2_score(y_test,pred)
+    return [mse, evs, r2_score]
 
 
-def get_utility_metrics(real_path,fake_paths,scaler="MinMax",classifiers=["lr","dt","rf","mlp"],test_ratio=.20):
+def get_utility_metrics(real_path,fake_paths,scaler="MinMax",type={"Classification":["lr","dt","rf","mlp"]},test_ratio=.20):
 
     data_real = pd.read_csv(real_path).to_numpy()
     data_dim = data_real.shape[1]
 
     data_real_y = data_real[:,-1]
     data_real_X = data_real[:,:data_dim-1]
-    X_train_real, X_test_real, y_train_real, y_test_real = model_selection.train_test_split(data_real_X ,data_real_y, test_size=test_ratio, stratify=data_real_y,random_state=42) 
+
+    problem = list(type.keys())[0]
+    
+    models = list(type.values())[0]
+    
+    if problem == "Classification":
+      X_train_real, X_test_real, y_train_real, y_test_real = model_selection.train_test_split(data_real_X ,data_real_y, test_size=test_ratio, stratify=data_real_y,random_state=42) 
+    else:
+      X_train_real, X_test_real, y_train_real, y_test_real = model_selection.train_test_split(data_real_X ,data_real_y, test_size=test_ratio,random_state=42) 
+    
 
     if scaler=="MinMax":
         scaler_real = MinMaxScaler()
     else:
         scaler_real = StandardScaler()
         
-    scaler_real.fit(data_real_X)
+    scaler_real.fit(X_train_real)
     X_train_real_scaled = scaler_real.transform(X_train_real)
     X_test_real_scaled = scaler_real.transform(X_test_real)
 
     all_real_results = []
-    for classifier in classifiers:
-      real_results = supervised_model_training(X_train_real_scaled,y_train_real,X_test_real_scaled,y_test_real,classifier)
+    for model in models:
+      real_results = supervised_model_training(X_train_real_scaled,y_train_real,X_test_real_scaled,y_test_real,model,problem)
       all_real_results.append(real_results)
       
     all_fake_results_avg = []
@@ -76,7 +99,11 @@ def get_utility_metrics(real_path,fake_paths,scaler="MinMax",classifiers=["lr","
       data_fake  = pd.read_csv(fake_path).to_numpy()
       data_fake_y = data_fake[:,-1]
       data_fake_X = data_fake[:,:data_dim-1]
-      X_train_fake, _ , y_train_fake, _ = model_selection.train_test_split(data_fake_X ,data_fake_y, test_size=test_ratio, stratify=data_fake_y,random_state=42) 
+
+      if problem=="Classification":
+        X_train_fake, _ , y_train_fake, _ = model_selection.train_test_split(data_fake_X ,data_fake_y, test_size=test_ratio, stratify=data_fake_y,random_state=42) 
+      else:
+        X_train_fake, _ , y_train_fake, _ = model_selection.train_test_split(data_fake_X ,data_fake_y, test_size=test_ratio,random_state=42)  
 
       if scaler=="MinMax":
         scaler_fake = MinMaxScaler()
@@ -88,8 +115,8 @@ def get_utility_metrics(real_path,fake_paths,scaler="MinMax",classifiers=["lr","
       X_train_fake_scaled = scaler_fake.transform(X_train_fake)
       
       all_fake_results = []
-      for classifier in classifiers:
-        fake_results = supervised_model_training(X_train_fake_scaled,y_train_fake,X_test_real_scaled,y_test_real,classifier)
+      for model in models:
+        fake_results = supervised_model_training(X_train_fake_scaled,y_train_fake,X_test_real_scaled,y_test_real,model,problem)
         all_fake_results.append(fake_results)
 
       all_fake_results_avg.append(all_fake_results)
@@ -139,13 +166,15 @@ def stat_sim(real_path,fake_path,cat_cols=None):
                     real_pdf_values.append(real_pdf[z])
                     fake_pdf_values.append(0)
             Stat_dict[column]=(distance.jensenshannon(real_pdf_values,fake_pdf_values, 2.0))
-            cat_stat.append(Stat_dict[column])        
+            cat_stat.append(Stat_dict[column])    
+            print("column: ", column, "JSD: ", Stat_dict[column])  
         else:
             scaler = MinMaxScaler()
             scaler.fit(real[column].values.reshape(-1,1))
             l1 = scaler.transform(real[column].values.reshape(-1,1)).flatten()
             l2 = scaler.transform(fake[column].values.reshape(-1,1)).flatten()
             Stat_dict[column]= (wasserstein_distance(l1,l2))
+            print("column: ", column, "WD: ", Stat_dict[column])
             num_stat.append(Stat_dict[column])
 
     return [np.mean(num_stat),np.mean(cat_stat),corr_dist]
