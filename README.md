@@ -44,10 +44,12 @@ is the side size of image. You can enlarge the list to [4, 8, 16, 24, 32, 64] or
 To cite this paper, you could use this bibtex
 
 ```
-@article{zhao2022ctab,
-  title={CTAB-GAN+: Enhancing Tabular Data Synthesis},
-  author={Zhao, Zilong and Kunar, Aditya and Birke, Robert and Chen, Lydia Y},
-  journal={arXiv preprint arXiv:2204.00401},
-  year={2022}
+@article{zhao2023ctab,
+  title={Ctab-gan+: Enhancing tabular data synthesis},
+  author={Zhao, Zilong and Kunar, Aditya and Birke, Robert and Van der Scheer, Hiek and Chen, Lydia Y},
+  journal={Frontiers in big Data},
+  volume={6},
+  year={2023},
+  publisher={Frontiers Media SA}
 }
 ```
